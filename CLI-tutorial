@@ -35,3 +35,45 @@ ManagedMonster ^monster_ref = gcnew ManagedMonster(120);
 monster_ref->TellHitPoints();
 delete monster_ref; // Call Dispose.
 }
+
+______________________________________________________________________________________________________________________________________
+// CLRtest.cpp : main project file.
+
+#include "stdafx.h"  //stdafx.h is a header file that contains essential definition information for the methods used in the program,
+#include <iostream>
+using namespace System;
+using namespace std;
+
+namespace MyNamespace
+{
+	void DoEverything()
+	{
+		Console::WriteLine(L"Managed Hello World"); // MANAGED
+		cout << "Native Hello World" << endl; // NATIVE
+	}
+}
+
+
+ref class ManagedMonster  //CHECK THE "ref"
+{
+public:
+	ManagedMonster(int HP) : m_HP(HP) {
+		cout << "ManagedMonster Constructor" << endl;
+	}
+	void TellHitPoints() {
+		cout << "ManagedMonster has " << m_HP << " HP" << endl;
+	}
+private:
+	int m_HP;
+};
+
+int main()
+{
+	//Console::WriteLine(L"Managed Hello World");
+	//std::cout << "Native Hello World" << std::endl;
+	MyNamespace::DoEverything();
+	//MANAGED CLASSES
+	ManagedMonster ^monster_ref = gcnew ManagedMonster(120);  //reference to a managed object, uses ^ character in C++/CLI
+	monster_ref->TellHitPoints(); // Garbage Collector frees allocated object at the end of the program.
+	return 0;
+}
