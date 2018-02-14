@@ -1,0 +1,160 @@
+// Description: Sentiment Analyzer API usage example.
+// Copyright: (C) 2015 EffectiveSoft Ltd. All Rights Reserved.
+// Technical support: technical-support@effective-soft.com
+// This example requires the libcurl and jsoncpp libraries.
+
+#include <iostream>
+#include "curl/curl.h"
+#include "json/json.h"
+
+using namespace std;
+
+// libcurl write callback function
+static int writer(char *data, size_t size, size_t nmemb,
+				  std::string *writerData)
+{
+	if (writerData == NULL)
+		return 0;
+	writerData->append(data, size*nmemb);
+	return size * nmemb;
+}
+
+// print categorized opinions
+void printTree(Json::Value node, int height)
+{
+	for(unsigned int i = 0; i < height; ++i) std::cout << "\t";
+	std::cout << node["t"].asString() << "\t";
+	if (node["w"].asDouble() != 0)
+	{
+		std::cout << node["w"].asDouble() << "\n";
+	}
+	else
+		std::cout << "\n";
+	node = node["children"];
+	height++;
+	for (unsigned int j = 0; j < node.size(); ++j)
+	{
+		printTree(node[j], height);
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	CURL *curl = NULL;
+	CURLcode res;
+
+	// set floating-point decimal precision
+	std::cout.setf(std::ios::fixed);
+	std::cout.precision(2);
+
+	// list of reviews in JSON format
+	char pszReviews[] = "[\
+		{\
+			\"id\": \"snt1\",\
+			\"text\": \"Very good comfort and very kind service in this modern hotel, very close to Chennai Airport.\"\
+		},\
+		{\
+			\"id\": \"snt2\",\
+			\"text\": \"The service and restaurants are excellent, especially like the Samudra restaurant providing lots of tempting alternatives.\"\
+		},\
+		{\
+			\"id\": \"snt3\",\
+			\"text\": \"Often travel to Chennai on business and this was the first time I tried the Trident, Chennai. I'll be staying here on all future trips. Excelllent service and the food was terrific.\"\
+		},\
+		{\
+			\"id\": \"snt4\",\
+			\"text\": \"The ambiance of the restaurants is very poor, Cinnamon is more laid back, Samudra is more exclusive. Food is excellent and of course with Trident totally safe. Staff are very warm and welcoming. The rooms are not brand new.\"\
+		}\
+						]";
+
+	// returned data from Intellexer API
+	std::string results;
+	// libcurl connection initialization
+	curl = curl_easy_init();
+	if (curl == NULL)
+	{
+		std::cerr << "Failed to create CURL connection\n";
+		return EXIT_FAILURE;
+	}
+	struct curl_slist *headerlist = NULL;
+	if(curl) 
+	{
+		// set the URL for POST request, specify url, parameters for information processing, ontology for opinion categorization and API key for authorization purposes (change YourAPIKey to the Intellexer API key)
+		curl_easy_setopt(curl, CURLOPT_URL, "http://api.intellexer.com/analyzeSentiments?apikey=YourAPIKey&ontology=hotels&loadSentences=true");
+		// set option to the callback function
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
+		// set option for writing received data
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &results);
+		// specify the POST data
+		headerlist = curl_slist_append(headerlist, "Content-Type: application/json");
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, pszReviews);
+		// perform the request
+		res = curl_easy_perform(curl);
+		// error checking
+		if(res != CURLE_OK)
+			std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << "\n";
+		else
+		{
+			// parse JSON results
+			Json::Value root;
+			Json::Reader reader;
+			bool isSuccess = reader.parse(results,	root, false);
+			if (isSuccess)
+			{
+				// print categorized opinions
+				std::cout << "Categorized Opinions with sentiment polarity (positive/negative)\n";
+				const Json::Value opinions = root["opinions"];
+				printTree(root["opinions"], 0);
+
+			}
+			else
+			{
+				std::cerr << "JSON parsing error\n";
+				return EXIT_FAILURE;
+			}
+		}
+		//cleanup
+		curl_easy_cleanup(curl);
+	}
+	//global cleanup
+	curl_global_cleanup();
+	return 0;
+}
+Output
+Categorized Opinions with sentiment polarity (positive/negative)
+	
+	Dining/Food & Drink	
+		food	
+			excellent	4.95
+			terrific	4.95
+	Hotel atmosphere	
+		ambiance	
+			very poor	-2.48
+		comfort	
+			very good	4.47
+	Hotel Facilities	
+		hotel	
+			modern	1.65
+		restaraunt	
+			excellent	4.95
+	Hotel/Room service	
+		service	
+			excellent	4.95
+			very kind	2.48
+	Staff	
+		hotel staff	
+			very warm	2.48
+			welcoming	1.65
+	Rooms/Room type	
+		room	
+			not brand new	-0.41
+	Other	
+		alternative	
+			tempting	1.65
+		chennai airport	
+			close	2.25
+		course	
+			totally safe	2.48
+		samudra	
+			more exclusive	2.06
