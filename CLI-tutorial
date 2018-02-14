@@ -1,0 +1,37 @@
+#include "stdafx.h"
+#include <iostream>
+using namespace System;
+using namespace std;
+
+
+
+ref class ManagedMonster {
+public:
+ManagedMonster(int HP);
+~ManagedMonster();
+!ManagedMonster();
+void TellHitPoints();
+private:
+int *m_DynamicHP;
+};
+ManagedMonster::ManagedMonster(int HP) : m_DynamicHP(new int(HP)) {
+cout << "ManagedMonster Constructor" << endl;
+}
+ManagedMonster::~ManagedMonster() {
+cout << "ManagedMonster Destructor" << endl;
+this->!ManagedMonster();
+}
+ManagedMonster::!ManagedMonster() {
+cout << "ManagedMonster Finalizer" << endl;
+delete m_DynamicHP;
+}
+void ManagedMonster::TellHitPoints() {
+cout << "ManagedMonster has " << *m_DynamicHP << " HP" << endl;
+}
+
+
+int main() {
+ManagedMonster ^monster_ref = gcnew ManagedMonster(120);
+monster_ref->TellHitPoints();
+delete monster_ref; // Call Dispose.
+}
