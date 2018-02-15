@@ -1,4 +1,5 @@
 ///receives the message from the user (Microsoft Bot Framework for CSharp)
+///receives the message from the user
 
 using System;
 using System.Net;
@@ -21,7 +22,7 @@ namespace Bot_Application1
         //{
         //    if (activity.Type == ActivityTypes.Message)
         //    {
-        //        await Conversation.SendAsync(activity, () => new Dialogs.RootDialog());      //here we call the RootDialog.cs
+        //        await Conversation.SendAsync(activity, () => new Dialogs.RootDialog());      //here we redirect to the RootDialog.cs
         //    }
         //    else
         //    {
@@ -75,18 +76,52 @@ namespace Bot_Application1
         }
 
     }
+
+    //EchoDIalog replies the user with what they said and in addition it also track the dialog state with a simple number of replies:
     [Serializable]
     public class EchoDialog : IDialog<object>
     {
+        protected int count = 1;
+
         public async Task StartAsync(IDialogContext context)
         {
             context.Wait(MessageReceivedAsync);
         }
 
-        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
+        //this function is called when a new message is received, it also evaluates the user's message before responding:
+        //If the user's message is "reset", the built-in PromptDialog.Confirm prompt spawns a sub-dialog that asks the user to confirm the count reset.
+        //The sub-dialog has its own private state that does not interfere with the parent dialog's state. When the user responds to the prompt, the result of the sub-dialog is passed to the AfterResetAsync
+        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument) 
         {
             var message = await argument;
-            await context.PostAsync("You said: " + message.Text);
+            if (message.Text == "reset")
+            {
+                PromptDialog.Confirm(
+                    context,
+                    AfterResetAsync,
+                    "Are you sure you want to reset the count?",
+                    "Didn't get that!",
+                    promptStyle: PromptStyle.None);
+            }
+            else
+            {
+                await context.PostAsync($"{this.count++}: You said {message.Text}");
+                context.Wait(MessageReceivedAsync);
+            }
+        }
+
+        public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument) //The IDialogContext interface that is passed into each dialog method provides access to the services that a dialog requires to save state and communicate with the channel. 
+        {
+            var confirm = await argument;
+            if (confirm)
+            {
+                this.count = 1;
+                await context.PostAsync("Reset count.");
+            }
+            else
+            {
+                await context.PostAsync("Did not reset count.");
+            }
             context.Wait(MessageReceivedAsync);
         }
     }
